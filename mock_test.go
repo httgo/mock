@@ -1,50 +1,12 @@
 package mock
 
 import (
-	"bytes"
 	"crypto/tls"
 	"github.com/nowk/assert"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
-
-func check(t *testing.T, err error) {
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-var mux *http.ServeMux
-var handerFn = func(bodyStr string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		w.Write([]byte(bodyStr))
-	})
-}
-
-func init() {
-	mux = http.NewServeMux()
-	mux.Handle("/", handerFn("Hello World!"))
-	mux.Handle("/foo", handerFn("foo"))
-	mux.Handle("/bar", handerFn("bar"))
-	mux.Handle("/baz", handerFn("baz"))
-}
-
-const host = "api.example.com"
-
-var ts = httptest.NewUnstartedServer(mux)
-
-func readBody(t *testing.T, r io.ReadCloser) *bytes.Buffer {
-	defer r.Close()
-
-	var b []byte
-	buf := bytes.NewBuffer(b)
-	_, err := buf.ReadFrom(r)
-	check(t, err)
-
-	return buf
-}
 
 func TestWithoutHostMocksAllHosts(t *testing.T) {
 	mock := Mock{
@@ -61,6 +23,7 @@ func TestWithoutHostMocksAllHosts(t *testing.T) {
 	} {
 		req, err := http.NewRequest("GET", v, nil)
 		check(t, err)
+
 		resp, err := mock.Do(req)
 		check(t, err)
 		buf := readBody(t, resp.Body)
@@ -80,12 +43,14 @@ func TestMockOnlyDefinedHost(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "http://api.example.com", nil)
 	check(t, err)
+
 	mock.Do(req)
 	assert.Equal(t, ft.ErrorMsg,
 		"mock error: called to unmocked URL: [GET] http://api.example.com")
 
 	req, err = http.NewRequest("GET", "http://google.com", nil)
 	check(t, err)
+
 	resp, err := mock.Do(req)
 	check(t, err)
 	buf := readBody(t, resp.Body)
@@ -102,6 +67,7 @@ func TestURLSwapDoesNotAlterTheOriginalRequest(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "http://api.example.com", nil)
 	check(t, err)
+
 	_, err = mock.Do(req)
 	check(t, err)
 	assert.Equal(t, req.URL.String(), "http://api.example.com")
@@ -122,6 +88,7 @@ func TestWithoutSchemeMocksAllSchemes(t *testing.T) {
 	} {
 		req, err := http.NewRequest("GET", v, nil)
 		check(t, err)
+
 		resp, err := mock.Do(req)
 		check(t, err)
 		buf := readBody(t, resp.Body)
@@ -141,6 +108,7 @@ func TestSchemeOnlyMocksForLikedScheme(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "http://api.example.com", nil)
 	check(t, err)
+
 	mock.Do(req)
 	assert.Equal(t, ft.ErrorMsg,
 		"mock error: called to unmocked URL: [GET] http://api.example.com")
@@ -160,6 +128,7 @@ func TestSchemeHTTPSIsRequiredForTLS(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "https://api.example.com", nil)
 	check(t, err)
+
 	resp, err := mock.Do(req)
 	check(t, err)
 	buf := readBody(t, resp.Body)
