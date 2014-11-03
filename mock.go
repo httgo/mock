@@ -16,6 +16,7 @@ type tester interface {
 
 type Mock struct {
 	Testing tester
+	Scheme  string
 	Host    string
 	Mux     *http.ServeMux
 	ts      *httptest.Server
@@ -42,7 +43,8 @@ func (m Mock) Do(req *http.Request) (*http.Response, error) {
 	tsReq := *req // do not alter the actual request
 
 	host := tsReq.URL.Host
-	if m.Host != "" && host != m.Host {
+	scheme := tsReq.URL.Scheme
+	if (m.Host != "" && host != m.Host) || (m.Scheme != "" && scheme != m.Scheme) {
 		m.Testing.Errorf("mock error: called to unmocked URL: [%s] %s",
 			tsReq.Method,
 			tsReq.URL.String())
@@ -53,6 +55,11 @@ func (m Mock) Do(req *http.Request) (*http.Response, error) {
 		m.Testing.Fatal(err)
 	}
 	tsReq.URL = u
+
+	if m.Host == "" {
+		tsReq.URL.Scheme = "http"
+	}
+
 	return http.DefaultClient.Do(&tsReq)
 }
 

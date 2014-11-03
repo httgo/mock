@@ -102,3 +102,42 @@ func TestURLSwapDoesNotAlterTheOriginalRequest(t *testing.T) {
 	check(t, err)
 	assert.Equal(t, req.URL.String(), "http://api.example.com")
 }
+
+func TestWithoutSchemeMocksAllSchemes(t *testing.T) {
+	mock := Mock{
+		Testing: t,
+		Mux:     mux,
+	}
+	mock.Start()
+	defer mock.Done()
+
+	for _, v := range []string{
+		"http://api.example.com",
+		"https://example.com",
+		"http://blog.example.com",
+	} {
+		req, err := http.NewRequest("GET", v, nil)
+		check(t, err)
+		resp, err := mock.Do(req)
+		check(t, err)
+		buf := readBody(t, resp.Body)
+		assert.Equal(t, buf.String(), "Hello World!")
+	}
+}
+
+func TestSchemeOnlyMocksForLikedScheme(t *testing.T) {
+	ft := &tTesting{}
+	mock := Mock{
+		Testing: ft,
+		Scheme:  "https",
+		Mux:     mux,
+	}
+	mock.Start()
+	defer mock.Done()
+
+	req, err := http.NewRequest("GET", "http://api.example.com", nil)
+	check(t, err)
+	mock.Do(req)
+	assert.Equal(t, ft.ErrorMsg,
+		"mock error: called to unmocked URL: [GET] http://api.example.com")
+}
