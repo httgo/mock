@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -65,6 +66,19 @@ func (m Mock) tsURLize(req *http.Request) (*url.URL, *url.URL, error) {
 	return &ucopy, &uorig, nil
 }
 
+// client returns a new http.Client
+// Configured with TLS if scheme is https
+func (m Mock) client() *http.Client {
+	c := &http.Client{}
+	if m.Scheme == "https" {
+		c.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	}
+
+	return c
+}
+
 // Do is the interface to http.DefaultClient.Do
 func (m Mock) Do(req *http.Request) (*http.Response, error) {
 	err := m.check(req)
@@ -78,15 +92,25 @@ func (m Mock) Do(req *http.Request) (*http.Response, error) {
 	}
 	req.URL = ucopy
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := m.client().Do(req)
 	req.URL = uorig // restore
 	return resp, err
 }
 
 // Start starts the httptest server
+// Server will start in TLS if the defined server has a TLS config
 // This needs to be called to begin the mock
 func (m *Mock) Start() *httptest.Server {
-	m.Ts = httptest.NewServer(m.Mux)
+	if m.Ts == nil {
+		m.Ts = httptest.NewUnstartedServer(m.Mux)
+	}
+
+	if m.Ts.TLS != nil {
+		m.Ts.StartTLS()
+	} else {
+		m.Ts.Start()
+	}
+
 	return m.Ts
 }
 

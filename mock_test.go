@@ -2,9 +2,11 @@ package mock
 
 import (
 	"bytes"
+	"crypto/tls"
 	"github.com/nowk/assert"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -140,4 +142,24 @@ func TestSchemeOnlyMocksForLikedScheme(t *testing.T) {
 	mock.Do(req)
 	assert.Equal(t, ft.ErrorMsg,
 		"mock error: called to unmocked URL: [GET] http://api.example.com")
+}
+
+func TestHTTPSNeedsTLSconfiguredUnstartedServer(t *testing.T) {
+	ts := httptest.NewUnstartedServer(mux)
+	ts.TLS = &tls.Config{InsecureSkipVerify: true}
+
+	mock := Mock{
+		Testing: t,
+		Scheme:  "https",
+		Ts:      ts,
+	}
+	mock.Start()
+	defer mock.Done()
+
+	req, err := http.NewRequest("GET", "https://api.example.com", nil)
+	check(t, err)
+	resp, err := mock.Do(req)
+	check(t, err)
+	buf := readBody(t, resp.Body)
+	assert.Equal(t, buf.String(), "Hello World!")
 }
