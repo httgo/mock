@@ -33,6 +33,8 @@ func init() {
 
 const host = "api.example.com"
 
+var ts = httptest.NewUnstartedServer(mux)
+
 func readBody(t *testing.T, r io.ReadCloser) *bytes.Buffer {
 	defer r.Close()
 
@@ -47,7 +49,7 @@ func readBody(t *testing.T, r io.ReadCloser) *bytes.Buffer {
 func TestWithoutHostMocksAllHosts(t *testing.T) {
 	mock := Mock{
 		Testing: t,
-		Mux:     mux,
+		Ts:      httptest.NewUnstartedServer(mux),
 	}
 	mock.Start()
 	defer mock.Done()
@@ -71,7 +73,7 @@ func TestMockOnlyDefinedHost(t *testing.T) {
 	mock := Mock{
 		Testing: ft,
 		Host:    "google.com",
-		Mux:     mux,
+		Ts:      httptest.NewUnstartedServer(mux),
 	}
 	mock.Start()
 	defer mock.Done()
@@ -93,7 +95,7 @@ func TestMockOnlyDefinedHost(t *testing.T) {
 func TestURLSwapDoesNotAlterTheOriginalRequest(t *testing.T) {
 	mock := Mock{
 		Testing: t,
-		Mux:     mux,
+		Ts:      httptest.NewUnstartedServer(mux),
 	}
 	mock.Start()
 	defer mock.Done()
@@ -108,7 +110,7 @@ func TestURLSwapDoesNotAlterTheOriginalRequest(t *testing.T) {
 func TestWithoutSchemeMocksAllSchemes(t *testing.T) {
 	mock := Mock{
 		Testing: t,
-		Mux:     mux,
+		Ts:      httptest.NewUnstartedServer(mux),
 	}
 	mock.Start()
 	defer mock.Done()
@@ -132,7 +134,7 @@ func TestSchemeOnlyMocksForLikedScheme(t *testing.T) {
 	mock := Mock{
 		Testing: ft,
 		Scheme:  "https",
-		Mux:     mux,
+		Ts:      httptest.NewUnstartedServer(mux),
 	}
 	mock.Start()
 	defer mock.Done()
@@ -144,7 +146,7 @@ func TestSchemeOnlyMocksForLikedScheme(t *testing.T) {
 		"mock error: called to unmocked URL: [GET] http://api.example.com")
 }
 
-func TestHTTPSNeedsTLSconfiguredUnstartedServer(t *testing.T) {
+func TestSchemeHTTPSIsRequiredForTLS(t *testing.T) {
 	ts := httptest.NewUnstartedServer(mux)
 	ts.TLS = &tls.Config{InsecureSkipVerify: true}
 

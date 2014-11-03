@@ -19,7 +19,6 @@ type Mock struct {
 	Testing tester
 	Scheme  string
 	Host    string
-	Mux     *http.ServeMux
 	Ts      *httptest.Server
 }
 
@@ -101,10 +100,6 @@ func (m Mock) Do(req *http.Request) (*http.Response, error) {
 // Server will start in TLS if the defined server has a TLS config
 // This needs to be called to begin the mock
 func (m *Mock) Start() *httptest.Server {
-	if m.Ts == nil {
-		m.Ts = httptest.NewUnstartedServer(m.Mux)
-	}
-
 	if m.Ts.TLS != nil {
 		m.Ts.StartTLS()
 	} else {
