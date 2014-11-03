@@ -65,6 +65,7 @@ func (m Mock) tsURLize(req *http.Request) (*url.URL, *url.URL, error) {
 	return &ucopy, &uorig, nil
 }
 
+// Do is the interface to http.DefaultClient.Do
 func (m Mock) Do(req *http.Request) (*http.Response, error) {
 	err := m.check(req)
 	if err != nil {
