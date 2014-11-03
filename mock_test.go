@@ -82,6 +82,13 @@ func TestMockOnlyDefinedHost(t *testing.T) {
 	mock.Do(req)
 	assert.Equal(t, ft.ErrorMsg,
 		"mock error: called to unmocked URL: [GET] http://api.example.com")
+
+	req, err = http.NewRequest("GET", "http://google.com", nil)
+	check(t, err)
+	resp, err := mock.Do(req)
+	check(t, err)
+	buf := readBody(t, resp.Body)
+	assert.Equal(t, buf.String(), "Hello World!")
 }
 
 func TestURLSwapDoesNotAlterTheOriginalRequest(t *testing.T) {
