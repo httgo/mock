@@ -19,7 +19,7 @@ type Mock struct {
 	Scheme  string
 	Host    string
 	Mux     *http.ServeMux
-	ts      *httptest.Server
+	Ts      *httptest.Server
 }
 
 func (m *Mock) T(t tester) {
@@ -48,7 +48,7 @@ func (m Mock) check(req *http.Request) error {
 // tsURLize returns a new url set to the test server for this mock and a copy of
 // the original url
 func (m Mock) tsURLize(req *http.Request) (*url.URL, *url.URL, error) {
-	tsurl, err := url.Parse(m.ts.URL)
+	tsurl, err := url.Parse(m.Ts.URL)
 	if err != nil {
 		return nil, req.URL, err
 	}
@@ -86,11 +86,11 @@ func (m Mock) Do(req *http.Request) (*http.Response, error) {
 // Start starts the httptest server
 // This needs to be called to begin the mock
 func (m *Mock) Start() *httptest.Server {
-	m.ts = httptest.NewServer(m.Mux)
-	return m.ts
+	m.Ts = httptest.NewServer(m.Mux)
+	return m.Ts
 }
 
 // Done closes the test server
 func (m Mock) Done() {
-	m.ts.Close()
+	m.Ts.Close()
 }
