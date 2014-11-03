@@ -1,4 +1,4 @@
-language: golang
+language: go
 install:
   - go get github.com/nowk/assert
 go:
