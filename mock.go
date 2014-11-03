@@ -26,19 +26,6 @@ func (m *Mock) T(t tester) {
 	m.Testing = t
 }
 
-// swapHost returns a new url with the hsot swapped in with that of the test
-// server
-func swapHost(u *url.URL, ts *httptest.Server) (*url.URL, error) {
-	tsURL, err := url.Parse(ts.URL)
-	if err != nil {
-		return nil, err
-	}
-
-	newURL := *u
-	newURL.Host = tsURL.Host
-	return &newURL, nil
-}
-
 // check checks the scheme and host eligibility
 func (m Mock) check(req *http.Request) error {
 	err := UnmockedError{
@@ -58,25 +45,41 @@ func (m Mock) check(req *http.Request) error {
 	return nil
 }
 
-func (m Mock) Do(req *http.Request) (*http.Response, error) {
-	tsReq := *req // do not alter the actual request
+// tsURLize returns a new url set to the test server for this mock and a copy of
+// the original url
+func (m Mock) tsURLize(req *http.Request) (*url.URL, *url.URL, error) {
+	tsurl, err := url.Parse(m.ts.URL)
+	if err != nil {
+		return nil, req.URL, err
+	}
 
+	uorig := *req.URL
+	ucopy := *req.URL
+	ucopy.Host = tsurl.Host
+
+	// default to http is no scheme is defined on the mock
+	if m.Scheme == "" {
+		ucopy.Scheme = "http"
+	}
+
+	return &ucopy, &uorig, nil
+}
+
+func (m Mock) Do(req *http.Request) (*http.Response, error) {
 	err := m.check(req)
 	if err != nil {
 		m.Testing.Error(err)
 	}
 
-	u, err := swapHost(tsReq.URL, m.ts)
+	ucopy, uorig, err := m.tsURLize(req)
 	if err != nil {
 		m.Testing.Fatal(err)
 	}
-	tsReq.URL = u
+	req.URL = ucopy
 
-	if m.Host == "" {
-		tsReq.URL.Scheme = "http"
-	}
-
-	return http.DefaultClient.Do(&tsReq)
+	resp, err := http.DefaultClient.Do(req)
+	req.URL = uorig // restore
+	return resp, err
 }
 
 // Start starts the httptest server
