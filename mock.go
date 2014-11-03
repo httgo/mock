@@ -39,15 +39,31 @@ func swapHost(u *url.URL, ts *httptest.Server) (*url.URL, error) {
 	return &newURL, nil
 }
 
+// check checks the scheme and host eligibility
+func (m Mock) check(req *http.Request) error {
+	err := UnmockedError{
+		Method: req.Method,
+		URL:    req.URL.String(),
+	}
+
+	u := req.URL
+	if m.Host != "" && m.Host != u.Host {
+		return err
+	}
+
+	if m.Scheme != "" && m.Scheme != u.Scheme {
+		return err
+	}
+
+	return nil
+}
+
 func (m Mock) Do(req *http.Request) (*http.Response, error) {
 	tsReq := *req // do not alter the actual request
 
-	host := tsReq.URL.Host
-	scheme := tsReq.URL.Scheme
-	if (m.Host != "" && host != m.Host) || (m.Scheme != "" && scheme != m.Scheme) {
-		m.Testing.Errorf("mock error: called to unmocked URL: [%s] %s",
-			tsReq.Method,
-			tsReq.URL.String())
+	err := m.check(req)
+	if err != nil {
+		m.Testing.Error(err)
 	}
 
 	u, err := swapHost(tsReq.URL, m.ts)
