@@ -57,10 +57,8 @@ func TestWithoutHostMocksAllHosts(t *testing.T) {
 	} {
 		req, err := http.NewRequest("GET", v, nil)
 		check(t, err)
-
 		resp, err := mock.Do(req)
 		check(t, err)
-
 		buf := readBody(t, resp.Body)
 		assert.Equal(t, buf.String(), "Hello World!")
 	}
@@ -78,7 +76,6 @@ func TestMockOnlyDefinedHost(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "http://api.example.com", nil)
 	check(t, err)
-
 	mock.Do(req)
 	assert.Equal(t, ft.ErrorMsg,
 		"mock error: called to unmocked URL: [GET] http://api.example.com")
@@ -101,9 +98,7 @@ func TestURLSwapDoesNotAlterTheOriginalRequest(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "http://api.example.com", nil)
 	check(t, err)
-
 	_, err = mock.Do(req)
 	check(t, err)
-
 	assert.Equal(t, req.URL.String(), "http://api.example.com")
 }
