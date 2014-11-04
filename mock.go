@@ -53,7 +53,6 @@ func (m Mock) tsURLize(req *http.Request) (*url.URL, *url.URL, error) {
 		return nil, req.URL, err
 	}
 
-	uorig := *req.URL
 	ucopy := *req.URL
 	ucopy.Host = tsurl.Host
 
@@ -62,7 +61,7 @@ func (m Mock) tsURLize(req *http.Request) (*url.URL, *url.URL, error) {
 		ucopy.Scheme = "http"
 	}
 
-	return &ucopy, &uorig, nil
+	return &ucopy, req.URL, nil
 }
 
 // client returns a new http.Client
