@@ -100,15 +100,14 @@ func (m Mock) Do(req *http.Request) (*http.Response, error) {
 }
 
 // Start starts the httptest server
-// Server will start in TLS if the defined server has a TLS config
-// This needs to be called to begin the mock
 func (m *Mock) Start() *httptest.Server {
-	if m.Ts.TLS != nil {
-		m.Ts.StartTLS()
-	} else {
-		m.Ts.Start()
-	}
+	m.Ts.Start()
+	return m.Ts
+}
 
+// StartTLS starts the server TLS
+func (m *Mock) StartTLS() *httptest.Server {
+	m.Ts.StartTLS()
 	return m.Ts
 }
 
