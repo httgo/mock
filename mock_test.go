@@ -64,12 +64,18 @@ func TestURLSwapDoesNotAlterTheOriginalRequest(t *testing.T) {
 	mock.Start()
 	defer mock.Done()
 
-	req, err := http.NewRequest("GET", "http://api.example.com/foo", nil)
-	check(t, err)
+	for _, v := range []string{
+		"http://api.example.com",
+		"http://api.example.com/foo",
+		"http://api.example.com/bar",
+	} {
+		req, err := http.NewRequest("GET", v, nil)
+		check(t, err)
 
-	_, err = mock.Do(req)
-	check(t, err)
-	assert.Equal(t, req.URL.String(), "http://api.example.com/foo")
+		_, err = mock.Do(req)
+		check(t, err)
+		assert.Equal(t, req.URL.String(), v)
+	}
 }
 
 func TestWithoutSchemeMocksAllSchemes(t *testing.T) {
