@@ -119,15 +119,21 @@ func TestDefningSchemeThrowsErrorForNonMatchinScheme(t *testing.T) {
 	}
 }
 
-func TestSchemeHTTPSIsRequiredForTLS(t *testing.T) {
+func TestHTTPSDefinesTLSConfigOnBothServerAndClient(t *testing.T) {
 	ts := httptest.NewUnstartedServer(mux)
 	ts.TLS = &tls.Config{InsecureSkipVerify: true}
+
+	c := &http.Client{}
+	c.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 
 	mock := Mock{
 		Testing: t,
 		Scheme:  "https",
 		Ts:      ts,
 	}
+	mock.SetClient(c)
 	mock.Start()
 	defer mock.Done()
 
@@ -136,6 +142,7 @@ func TestSchemeHTTPSIsRequiredForTLS(t *testing.T) {
 
 	resp, err := mock.Do(req)
 	check(t, err)
+
 	buf := readBody(t, resp.Body)
 	assert.Equal(t, buf.String(), "Hello World!")
 }

@@ -1,7 +1,6 @@
 package mock
 
 import (
-	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -20,6 +19,8 @@ type Mock struct {
 	Scheme  string
 	Host    string
 	Ts      *httptest.Server
+
+	_client *http.Client
 }
 
 func (m *Mock) T(t tester) {
@@ -64,17 +65,20 @@ func (m Mock) tsURLize(req *http.Request) (*url.URL, *url.URL, error) {
 	return &ucopy, req.URL, nil
 }
 
-// client returns a new http.Client
-// Configured with TLS if scheme is https
+// SetClient allows you to define an http.Client to use for the mock
+// Primary use to set a client with a specific TLS configuration
+func (m *Mock) SetClient(c *http.Client) {
+	m._client = c
+}
+
+// client returns the defined client from SetClient() or defaults to
+// http.DefaultClient
 func (m Mock) client() *http.Client {
-	c := &http.Client{}
-	if m.Scheme == "https" {
-		c.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
+	if m._client == nil {
+		m._client = http.DefaultClient
 	}
 
-	return c
+	return m._client
 }
 
 // Do is the interface to http.DefaultClient.Do
