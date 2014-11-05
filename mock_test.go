@@ -156,7 +156,7 @@ func TestHTTPSDefinesTLSConfigOnBothServerAndClient(t *testing.T) {
 	assert.Equal(t, buf.String(), "Hello World!")
 }
 
-func TestCanRetrieveTheRequestByURLString(t *testing.T) {
+func TestCanRetrieveRequestHistoryByMethodAndURLString(t *testing.T) {
 	mock := Mock{
 		Testing: t,
 		Ts:      httptest.NewUnstartedServer(mux),
@@ -167,14 +167,19 @@ func TestCanRetrieveTheRequestByURLString(t *testing.T) {
 	req1, _ := http.NewRequest("POST", "https://api.example.com/foo", nil)
 	req2, _ := http.NewRequest("POST", "https://api.example.com/foo", nil)
 	req3, _ := http.NewRequest("POST", "https://api.example.com/foo", nil)
+	req4, _ := http.NewRequest("GET", "https://api.example.com/foo", nil)
 
 	mock.Do(req1)
 	mock.Do(req1)
 	mock.Do(req2)
 	mock.Do(req3)
+	mock.Do(req4)
 
 	reqs := mock.History("POST", "https://api.example.com/foo")
 	assert.Equal(t, 4, len(reqs))
+
+	reqs = mock.History("GET", "https://api.example.com/foo")
+	assert.Equal(t, 1, len(reqs))
 }
 
 func TestDoneResetsMockState(t *testing.T) {
