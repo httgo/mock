@@ -142,7 +142,7 @@ func TestHTTPSDefinesTLSConfigOnBothServerAndClient(t *testing.T) {
 		Scheme:  "https",
 		Ts:      ts,
 	}
-	mock.SetClient(c)
+	mock.UseClient(c)
 	mock.StartTLS()
 	defer mock.Done()
 

@@ -65,13 +65,13 @@ func (m Mock) tsURLize(req *http.Request) (*url.URL, *url.URL, error) {
 	return &ucopy, req.URL, nil
 }
 
-// SetClient allows you to define an http.Client to use for the mock
+// UseClient allows you to define an http.Client to use for the mock
 // Primary use to set a client with a specific TLS configuration
-func (m *Mock) SetClient(c *http.Client) {
+func (m *Mock) UseClient(c *http.Client) {
 	m._client = c
 }
 
-// client returns the defined client from SetClient() or defaults to
+// client returns the defined client from UseClient() or defaults to
 // http.DefaultClient
 func (m Mock) client() *http.Client {
 	if m._client == nil {
