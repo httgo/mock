@@ -46,22 +46,36 @@ func readBody(t *testing.T, r io.ReadCloser) *bytes.Buffer {
 
 // tTesting contains several of the testing package's actual methods
 type tTesting struct {
-	ErrorMsg string
-	FatalMsg string
+	errorMsg string
+	fatalMsg string
 }
 
 func (t *tTesting) Error(s ...interface{}) {
-	t.ErrorMsg = fmt.Sprint(s...)
+	t.errorMsg = fmt.Sprint(s...)
 }
 
 func (t *tTesting) Errorf(pat string, s ...interface{}) {
-	t.ErrorMsg = fmt.Sprintf(pat, s...)
+	t.errorMsg = fmt.Sprintf(pat, s...)
 }
 
 func (t *tTesting) Fatal(s ...interface{}) {
-	t.FatalMsg = fmt.Sprint(s...)
+	t.fatalMsg = fmt.Sprint(s...)
 }
 
 func (t *tTesting) Fatalf(pat string, s ...interface{}) {
-	t.FatalMsg = fmt.Sprintf(pat, s...)
+	t.fatalMsg = fmt.Sprintf(pat, s...)
+}
+
+func (t *tTesting) ErrorMsg() string {
+	defer func() {
+		t.errorMsg = ""
+	}()
+	return t.errorMsg
+}
+
+func (t *tTesting) FatalMsg() string {
+	defer func() {
+		t.fatalMsg = ""
+	}()
+	return t.fatalMsg
 }
