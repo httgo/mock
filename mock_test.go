@@ -45,7 +45,8 @@ func TestDefiningHostThrowsErrorForNonMatchingURLs(t *testing.T) {
 	for _, v := range []struct {
 		u, err string
 	}{
-		{"http://api.example.com", "mock error: called to unmocked URL: [GET] http://api.example.com"},
+		{"http://api.example.com",
+			"mock error: called to unmocked URL: [GET] http://api.example.com"},
 		{"http://google.com", ""},
 	} {
 		req, err := http.NewRequest("GET", v.u, nil)
@@ -96,6 +97,7 @@ func TestWithoutSchemeMocksAllSchemes(t *testing.T) {
 
 		resp, err := mock.Do(req)
 		check(t, err)
+
 		buf := readBody(t, resp.Body)
 		assert.Equal(t, buf.String(), "Hello World!")
 	}
@@ -114,7 +116,8 @@ func TestDefningSchemeThrowsErrorForNonMatchinScheme(t *testing.T) {
 	for _, v := range []struct {
 		u, err string
 	}{
-		{"http://api.example.com", "mock error: called to unmocked URL: [GET] http://api.example.com"},
+		{"http://api.example.com",
+			"mock error: called to unmocked URL: [GET] http://api.example.com"},
 		{"https://api.example.com", ""},
 	} {
 		req, err := http.NewRequest("GET", v.u, nil)
