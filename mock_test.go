@@ -155,3 +155,24 @@ func TestHTTPSDefinesTLSConfigOnBothServerAndClient(t *testing.T) {
 	buf := readBody(t, resp.Body)
 	assert.Equal(t, buf.String(), "Hello World!")
 }
+
+func TestCanRetrieveTheRequestByURLString(t *testing.T) {
+	mock := Mock{
+		Testing: t,
+		Ts:      httptest.NewUnstartedServer(mux),
+	}
+	mock.Start()
+	defer mock.Done()
+
+	req1, _ := http.NewRequest("POST", "https://api.example.com/foo", nil)
+	req2, _ := http.NewRequest("POST", "https://api.example.com/foo", nil)
+	req3, _ := http.NewRequest("POST", "https://api.example.com/foo", nil)
+
+	mock.Do(req1)
+	mock.Do(req1)
+	mock.Do(req2)
+	mock.Do(req3)
+
+	reqs := mock.History("POST", "https://api.example.com/foo")
+	assert.Equal(t, 4, len(reqs))
+}

@@ -20,7 +20,8 @@ type Mock struct {
 	Host    string
 	Ts      *httptest.Server
 
-	_client *http.Client
+	_client  *http.Client
+	_history map[string]map[string][]*http.Request
 }
 
 func (m *Mock) T(t tester) {
@@ -81,8 +82,25 @@ func (m Mock) client() *http.Client {
 	return m._client
 }
 
+// writeHistory logs the requests on mock by Method : URLString : []Request
+func (m *Mock) writeHistory(req *http.Request) {
+	if m._history == nil {
+		m._history = make(map[string]map[string][]*http.Request)
+	}
+	meth, u := req.Method, req.URL
+
+	h := m._history[meth]
+	if h == nil {
+		h = make(map[string][]*http.Request)
+	}
+
+	s := u.String()
+	h[s] = append(h[s], req)
+	m._history[meth] = h
+}
+
 // Do is the interface to http.DefaultClient.Do
-func (m Mock) Do(req *http.Request) (*http.Response, error) {
+func (m *Mock) Do(req *http.Request) (*http.Response, error) {
 	err := m.check(req)
 	if err != nil {
 		m.Testing.Error(err)
@@ -93,9 +111,11 @@ func (m Mock) Do(req *http.Request) (*http.Response, error) {
 		m.Testing.Fatal(err)
 	}
 	req.URL = ucopy
-
 	resp, err := m.client().Do(req)
 	req.URL = uorig // restore
+
+	m.writeHistory(req)
+
 	return resp, err
 }
 
@@ -114,4 +134,14 @@ func (m *Mock) StartTLS() *httptest.Server {
 // Done closes the test server
 func (m Mock) Done() {
 	m.Ts.Close()
+}
+
+// History returns matching requests made on mock
+func (m Mock) History(method, urlStr string) []*http.Request {
+	meth := m._history[method]
+	if meth == nil {
+		return nil
+	}
+
+	return meth[urlStr]
 }
