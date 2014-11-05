@@ -15,7 +15,7 @@ func check(t *testing.T, err error) {
 }
 
 // handlerFn helper to create handlers with a particular body string
-var handerFn = func(bodyStr string) http.Handler {
+var handlerFn = func(bodyStr string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte(bodyStr))
 	})
@@ -26,10 +26,10 @@ var mux *http.ServeMux
 // init some basic handles
 func init() {
 	mux = http.NewServeMux()
-	mux.Handle("/", handerFn("Hello World!"))
-	mux.Handle("/foo", handerFn("foo"))
-	mux.Handle("/bar", handerFn("bar"))
-	mux.Handle("/baz", handerFn("baz"))
+	mux.Handle("/", handlerFn("Hello World!"))
+	mux.Handle("/foo", handlerFn("foo"))
+	mux.Handle("/bar", handlerFn("bar"))
+	mux.Handle("/baz", handlerFn("baz"))
 }
 
 // readBody helper reads from ReadCloser
