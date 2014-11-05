@@ -131,8 +131,9 @@ func (m *Mock) StartTLS() *httptest.Server {
 	return m.Ts
 }
 
-// Done closes the test server
-func (m Mock) Done() {
+// Done closes the test server and resets mock state
+func (m *Mock) Done() {
+	m._history = nil
 	m.Ts.Close()
 }
 

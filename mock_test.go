@@ -176,3 +176,24 @@ func TestCanRetrieveTheRequestByURLString(t *testing.T) {
 	reqs := mock.History("POST", "https://api.example.com/foo")
 	assert.Equal(t, 4, len(reqs))
 }
+
+func TestDoneResetsMockState(t *testing.T) {
+	mock := Mock{
+		Testing: t,
+		Ts:      httptest.NewUnstartedServer(mux),
+	}
+	mock.Start()
+
+	req, err := http.NewRequest("POST", "https://api.example.com/foo", nil)
+	check(t, err)
+
+	mock.Do(req)
+	mock.Do(req)
+
+	reqs := mock.History("POST", "https://api.example.com/foo")
+	assert.Equal(t, 2, len(reqs))
+
+	mock.Done()
+	reqs = mock.History("POST", "https://api.example.com/foo")
+	assert.Equal(t, 0, len(reqs))
+}
