@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"bytes"
 	"crypto/tls"
 	"github.com/nowk/assert"
 	"net/http"
@@ -235,4 +236,34 @@ func TestDoneResetsMockState(t *testing.T) {
 	mock.Done()
 	reqs = mock.History("POST", "https://api.example.com/foo")
 	assert.Equal(t, 0, len(reqs))
+}
+
+func TestRequestBodyCanBeReadAtBothEnds(t *testing.T) {
+	var b []byte
+	buf := bytes.NewBuffer(b)
+
+	h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		defer req.Body.Close()
+		buf.ReadFrom(req.Body)
+	})
+
+	mux := http.NewServeMux()
+	mux.Handle("/request/body", h)
+
+	mock := Mock{
+		Testing: t,
+		Ts:      httptest.NewUnstartedServer(mux),
+	}
+	mock.Start()
+
+	r := bytes.NewBufferString("Foo Bar")
+	req, err := http.NewRequest("POST", "https://api.example.com/request/body", r)
+	check(t, err)
+
+	mock.Do(req)
+	assert.Equal(t, "Foo Bar", buf.String())
+
+	reqs := mock.History("POST", "https://api.example.com/request/body")
+	body := readBody(t, reqs[0].Body)
+	assert.Equal(t, "Foo Bar", body.String())
 }
