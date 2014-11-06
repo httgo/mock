@@ -5,6 +5,7 @@ import (
 	"github.com/nowk/assert"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 )
 
@@ -180,6 +181,39 @@ func TestCanRetrieveRequestHistoryByMethodAndURLString(t *testing.T) {
 
 	reqs = mock.History("GET", "https://api.example.com/foo")
 	assert.Equal(t, 1, len(reqs))
+}
+
+func TestCanRetrieveRequestHistoryWithRegex(t *testing.T) {
+	mock := Mock{
+		Testing: t,
+		Ts:      httptest.NewUnstartedServer(mux),
+	}
+	mock.Start()
+	defer mock.Done()
+
+	req1, _ := http.NewRequest("GET", "https://api.example.com", nil)
+	req2, _ := http.NewRequest("GET", "https://api.example.com/foo", nil)
+	req3, _ := http.NewRequest("GET", "https://api.example.com/bar", nil)
+	req4, _ := http.NewRequest("GET", "https://api.example.com/baz", nil)
+
+	mock.Do(req1)
+	mock.Do(req2)
+	mock.Do(req3)
+	mock.Do(req4)
+
+	for _, v := range []struct {
+		r string
+		n int
+	}{
+		{`api\.example\.com\/b\w+`, 2},
+		{`api\.google\.com\/b\w+`, 0},
+		{`api\.example\.com`, 4},
+		{`api\.example\.com$`, 1},
+	} {
+		regp := regexp.MustCompile(v.r)
+		reqs := mock.History("GET", regp)
+		assert.Equal(t, v.n, len(reqs))
+	}
 }
 
 func TestDoneResetsMockState(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 )
 
 // tester is an interface for the testing package
@@ -138,11 +139,29 @@ func (m *Mock) Done() {
 }
 
 // History returns matching requests made on mock
-func (m Mock) History(method, urlStr string) []*http.Request {
+// Accepts both a full urlString or a regexp for partial string matches
+func (m Mock) History(method string, q interface{}) []*http.Request {
 	meth := m._history[method]
 	if meth == nil {
 		return nil
 	}
 
-	return meth[urlStr]
+	return matchRoute(q, meth)
+}
+
+func matchRoute(q interface{}, r map[string][]*http.Request) []*http.Request {
+	var reqs []*http.Request
+
+	switch u := q.(type) {
+	case *regexp.Regexp:
+		for k, v := range r {
+			if u.MatchString(k) {
+				reqs = append(reqs, v...)
+			}
+		}
+	case string:
+		return r[u]
+	}
+
+	return reqs
 }
