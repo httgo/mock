@@ -1,6 +1,7 @@
 language: go
 install:
   - go get github.com/nowk/assert
+  - go get github.com/httgo/interfaces/httpclient 
 go:
   - "1.0"
   - "1.2"
