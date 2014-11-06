@@ -1,12 +1,8 @@
 package mock
 
 import (
-	"bytes"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"regexp"
 )
 
@@ -51,25 +47,6 @@ func (m Mock) check(req *http.Request) error {
 	return nil
 }
 
-// tsURLize returns a new url set to the test server for this mock and a copy of
-// the original url
-func (m Mock) tsURLize(req *http.Request) (*url.URL, *url.URL, error) {
-	tsurl, err := url.Parse(m.Ts.URL)
-	if err != nil {
-		return nil, req.URL, err
-	}
-
-	ucopy := *req.URL
-	ucopy.Host = tsurl.Host
-
-	// default to http is no scheme is defined on the mock
-	if m.Scheme == "" {
-		ucopy.Scheme = "http"
-	}
-
-	return &ucopy, req.URL, nil
-}
-
 // UseClient allows you to define an http.Client to use for the mock
 // Primary use to set a client with a specific TLS configuration
 func (m *Mock) UseClient(c *http.Client) {
@@ -103,52 +80,6 @@ func (m *Mock) writeHistory(req *http.Request) {
 	m._history[meth] = h
 }
 
-// sandbox takes a request and modifies it to mock and restores to it's original
-// state
-func (m Mock) sandbox(req *http.Request, fn sandboxFunc) (*http.Response, error) {
-	ucopy, uorig, err := m.tsURLize(req)
-	if err != nil {
-		m.Testing.Fatal(err)
-	}
-
-	req.URL = ucopy
-	r, err := copyBody(req.Body)
-	if err != nil {
-		m.Testing.Fatal(err)
-	}
-
-	if r != nil {
-		req.Body = ioutil.NopCloser(r)
-	}
-
-	resp, err := fn.Do(req)
-
-	req.URL = uorig
-	if r != nil {
-		r.Seek(0, 0) // rewind
-	}
-
-	return resp, err
-}
-
-// copyBody reads a ReadCloser and returns a bytes.Reader (which can be seeked)
-func copyBody(c io.ReadCloser) (*bytes.Reader, error) {
-	if c == nil {
-		return nil, nil
-	}
-	defer c.Close()
-
-	var b []byte
-	buf := bytes.NewBuffer(b)
-	_, err := io.Copy(buf, c)
-	if err != nil {
-		return nil, err
-	}
-
-	r := bytes.NewReader(buf.Bytes())
-	return r, nil
-}
-
 // Do is the interface to http.Client.Do
 func (m *Mock) Do(req *http.Request) (*http.Response, error) {
 	err := m.check(req)
@@ -156,11 +87,13 @@ func (m *Mock) Do(req *http.Request) (*http.Response, error) {
 		m.Testing.Error(err)
 	}
 
-	resp, err := m.sandbox(req, func(req *http.Request) (*http.Response, error) {
-		return m.client().Do(req)
-	})
-	m.writeHistory(req)
+	tr := transaction{
+		Mock: m,
+	}
+	resp, err := tr.Do(req)
+	tr.Rollback()
 
+	m.writeHistory(req)
 	return resp, err
 }
 
