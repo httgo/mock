@@ -6,14 +6,6 @@ import (
 	"regexp"
 )
 
-// tester is an interface for the testing package
-type tester interface {
-	Error(...interface{})
-	Errorf(string, ...interface{})
-	Fatal(...interface{})
-	Fatalf(string, ...interface{})
-}
-
 type Mock struct {
 	Testing tester
 	Scheme  string
@@ -24,12 +16,23 @@ type Mock struct {
 	_history map[string]map[string][]*http.Request
 }
 
-func (m *Mock) T(t tester) {
-	m.Testing = t
+// UseClient allows you to define an http.Client to use in the mock
+func (m *Mock) UseClient(c *http.Client) {
+	m._client = c
 }
 
-// check checks the scheme and host eligibility
-func (m Mock) check(req *http.Request) error {
+// client returns the defined client from UseClient() or defaults to
+// http.DefaultClient
+func (m Mock) client() *http.Client {
+	if m._client == nil {
+		m._client = http.DefaultClient
+	}
+
+	return m._client
+}
+
+// eligible checks the scheme and host eligibility
+func (m Mock) eligible(req *http.Request) error {
 	err := UnmockedError{
 		Method: req.Method,
 		URL:    req.URL.String(),
@@ -47,23 +50,42 @@ func (m Mock) check(req *http.Request) error {
 	return nil
 }
 
-// UseClient allows you to define an http.Client to use for the mock
-// Primary use to set a client with a specific TLS configuration
-func (m *Mock) UseClient(c *http.Client) {
-	m._client = c
-}
-
-// client returns the defined client from UseClient() or defaults to
-// http.DefaultClient
-func (m Mock) client() *http.Client {
-	if m._client == nil {
-		m._client = http.DefaultClient
+// Do implements the http.Client.Do
+func (m *Mock) Do(req *http.Request) (*http.Response, error) {
+	err := m.eligible(req)
+	if err != nil {
+		m.Testing.Error(err)
 	}
 
-	return m._client
+	tr := transaction{
+		Mock: m,
+	}
+	resp, err := tr.Do(req)
+	tr.Rollback()
+
+	m.writeHistory(req)
+	return resp, err
 }
 
-// writeHistory logs the requests on mock by Method : URLString : []Request
+// Start starts the test server
+func (m *Mock) Start() *httptest.Server {
+	m.Ts.Start()
+	return m.Ts
+}
+
+// StartTLS starts the test server in TLS
+func (m *Mock) StartTLS() *httptest.Server {
+	m.Ts.StartTLS()
+	return m.Ts
+}
+
+// Done closes the test server and resets mock state
+func (m *Mock) Done() {
+	m._history = nil
+	m.Ts.Close()
+}
+
+// writeHistory logs the requests made on mock
 func (m *Mock) writeHistory(req *http.Request) {
 	if m._history == nil {
 		m._history = make(map[string]map[string][]*http.Request)
@@ -80,65 +102,30 @@ func (m *Mock) writeHistory(req *http.Request) {
 	m._history[meth] = h
 }
 
-// Do is the interface to http.Client.Do
-func (m *Mock) Do(req *http.Request) (*http.Response, error) {
-	err := m.check(req)
-	if err != nil {
-		m.Testing.Error(err)
-	}
-
-	tr := transaction{
-		Mock: m,
-	}
-	resp, err := tr.Do(req)
-	tr.Rollback()
-
-	m.writeHistory(req)
-	return resp, err
-}
-
-// Start starts the httptest server
-func (m *Mock) Start() *httptest.Server {
-	m.Ts.Start()
-	return m.Ts
-}
-
-// StartTLS starts the server TLS
-func (m *Mock) StartTLS() *httptest.Server {
-	m.Ts.StartTLS()
-	return m.Ts
-}
-
-// Done closes the test server and resets mock state
-func (m *Mock) Done() {
-	m._history = nil
-	m.Ts.Close()
-}
-
 // History returns matching requests made on mock
 // Accepts both a full urlString or a regexp for partial string matches
 func (m Mock) History(method string, q interface{}) []*http.Request {
-	meth := m._history[method]
-	if meth == nil {
+	reqs := m._history[method]
+	if reqs == nil {
 		return nil
 	}
 
-	return matchRoute(q, meth)
+	return matchRoute(reqs, q)
 }
 
-func matchRoute(q interface{}, r map[string][]*http.Request) []*http.Request {
-	var reqs []*http.Request
+func matchRoute(reqs map[string][]*http.Request, q interface{}) []*http.Request {
+	var r []*http.Request
 
 	switch u := q.(type) {
 	case *regexp.Regexp:
-		for k, v := range r {
+		for k, v := range reqs {
 			if u.MatchString(k) {
-				reqs = append(reqs, v...)
+				r = append(r, v...)
 			}
 		}
 	case string:
-		return r[u]
+		return reqs[u]
 	}
 
-	return reqs
+	return r
 }
