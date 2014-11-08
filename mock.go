@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"testing"
 )
 
 type Mock struct {
@@ -14,6 +15,10 @@ type Mock struct {
 
 	_client  *http.Client
 	_history map[string]map[string][]*http.Request
+}
+
+func (m *Mock) TestingT(t *testing.T) {
+	m.Testing = t
 }
 
 // UseClient allows you to define an http.Client to use in the mock
