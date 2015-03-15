@@ -2,11 +2,12 @@ package mock
 
 import (
 	"bytes"
-	"github.com/httgo/interfaces/httpclient"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	"gopkg.in/httgo/interfaces.v2"
 )
 
 // transaction provides a struct to transform and restore requests for use in
@@ -19,7 +20,7 @@ type transaction struct {
 	url  *url.URL
 }
 
-var _ httpclient.Interface = &transaction{}
+var _ interfaces.HTTPClient = &transaction{}
 
 // Do calls Do on the mock client after the request has been prepared
 func (t *transaction) Do(req *http.Request) (*http.Response, error) {
